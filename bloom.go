@@ -2,6 +2,8 @@ package BloomFilter
 
 import (
 	"errors"
+
+	"github.com/go-redis/redis/v8"
 )
 
 type Bloom interface {
@@ -10,10 +12,15 @@ type Bloom interface {
 	Clear()
 }
 
-func NewBloom(typ string) (Bloom, error) {
+func NewBloom(typ, key string) (Bloom, error) {
 	switch typ {
 	case "redis":
-		return NewRedisBloom(), nil
+		redisCli := redis.NewClient(&redis.Options{
+			Addr:     "localhost:6379",
+			Password: "", // no password set
+			DB:       0,  // use default DB
+		})
+		return NewRedisBloom(redisCli, key), nil
 	default:
 		return nil, errors.New("the type is not valid")
 	}
