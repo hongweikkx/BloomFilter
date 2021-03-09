@@ -17,7 +17,12 @@ type RedisBloom struct {
 	key      string
 }
 
-func NewRedisBloom(client *redis.Client, key string) *RedisBloom {
+func NewRedisBloom(key string) *RedisBloom {
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
 	redisBloom := &RedisBloom{redisCli: client, key: key}
 	return redisBloom
 }
@@ -50,3 +55,4 @@ func (redisBloom *RedisBloom) Clear() {
 func (redisBloom *RedisBloom) ValidBitOffset(old uint) uint {
 	return old % redisOffsetMax
 }
+

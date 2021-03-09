@@ -5,7 +5,7 @@ import (
 )
 
 func TestBloomFilter(t *testing.T) {
-	bloom, _ := NewBloom("redis", "redis-bloom-key")
+	bloom := NewRedisBloom("redis-bloom-key")
 	bloom.Clear()
 	e := bloom.Add("123456780")
 	if e != nil {
