@@ -140,7 +140,6 @@ func (blog *Blog) getVoteUsrKey(articleId string) string {
 func (blog *Blog) Vote(userId string, articleId string) error {
 	// 期限检测
 	postTime := blog.Client.HGet(blog.getArticleKey(articleId), "postTime").Val()
-	fmt.Println("postTime:", blog.getArticleKey(articleId), postTime)
 	postTimeInt, err := strconv.Atoi(postTime)
 	if err != nil {
 		return err
@@ -148,12 +147,15 @@ func (blog *Blog) Vote(userId string, articleId string) error {
 	if time.Now().Unix()-int64(postTimeInt) > ONE_WEEK_SECONDS {
 		return errors.New("article vote time expire")
 	}
-	cmd := blog.Client.SAdd(blog.getVoteUsrKey(articleId), userId)
+	// 竞态
+	pipeline := blog.Client.Pipeline()
+	cmd := pipeline.SAdd(blog.getVoteUsrKey(articleId), userId)
 	if cmd.Val() == 1 {
-		blog.Client.ZIncrBy(blog.getVoteKey(), float64(ONE_DAY_SECONDS/ARTICLES_PER_DAY), blog.getVoteScoreKey(articleId))
-		blog.Client.HIncrBy(blog.getVoteNumKey(articleId), "votes", 1)
+		pipeline.ZIncrBy(blog.getVoteKey(), float64(ONE_DAY_SECONDS/ARTICLES_PER_DAY), blog.getVoteScoreKey(articleId))
+		pipeline.HIncrBy(blog.getVoteNumKey(articleId), "votes", 1)
 	}
-	return nil
+	_, err = pipeline.Exec()
+	return err
 }
 
 const ARTICLE_PER_PAGE = 10
