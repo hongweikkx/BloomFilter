@@ -5,4 +5,5 @@ learn redis
 + [x] Blog (article's post&vote&rank)
 + [x] base
 + [x] shop
++ [x] log
 

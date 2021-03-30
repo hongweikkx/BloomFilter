@@ -3,7 +3,6 @@ package log
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -31,63 +30,60 @@ func NewLog() *Log {
 	return &Log{Client: initRedisClient()}
 }
 
-func (log *Log) GetRecentLogKey(name, level string) string {
+func (log *Log) getRecentLogKey(name, level string) string {
 	return fmt.Sprintf("recently:%s:%s", name, level)
 }
 
 func (log *Log) RecentLog(name, message string, level string) {
-	key := log.GetRecentLogKey(name, level)
+	key := log.getRecentLogKey(name, level)
 	pipeline := log.Client.Pipeline()
 	pipeline.LPush(context.Background(), key, message)
 	pipeline.LTrim(context.Background(), key, 0, 99)
 	pipeline.Exec(context.Background())
 }
 
-func (log *Log) GetCommonLogKey(name, level string, hour string) string {
-	return fmt.Sprintf("hour-%s:%s:%s", hour, name, level)
+func (log *Log) getCommonLogKey(name, level string) string {
+	return fmt.Sprintf("%s:%s", name, level)
 }
 
-func (log *Log) GetCommonLogOffsetKey() string {
-	return fmt.Sprintln("hour-common")
+func (log *Log) getCommonLogStartKey(name, level string) string {
+	return log.getCommonLogKey(name, level) + ":start"
 }
 
 func getDate() int {
 	return int(time.Now().Unix() / 3600)
 }
 
-func (log *Log) GetCommonLogOffset() string {
-	cmd := log.Client.Get(context.Background(), log.GetCommonLogOffsetKey())
-	if cmd.Err() != nil {
-		return strconv.Itoa(getDate())
-	}
-	return cmd.Val()
-}
-
-func (log *Log) SetCommonLogOffset() {
-	log.Client.Set(context.Background(), log.GetCommonLogOffsetKey(), getDate(), -1)
-}
-
 const RETRIES = 5
 
 func (log *Log) CommonLog(name, message string, level string) error {
 	txf := func(tx *redis.Tx) error {
-		pipeline := log.Client.TxPipeline()
-		hourS := log.GetCommonLogOffset()
-		houI, _ := strconv.Atoi(hourS)
+		pipeline := tx.TxPipeline()
 		nowHour := getDate()
-		if houI < nowHour {
-			pipeline.Set(context.Background(), log.GetCommonLogOffsetKey(), nowHour, -1)
+		if tx.Exists(context.Background(), log.getCommonLogStartKey(name, level)).Val() == 0 {
+			pipeline.Set(context.Background(), log.getCommonLogStartKey(name, level), nowHour, -1)
+		} else {
+			hour, _ := tx.Get(context.Background(), log.getCommonLogStartKey(name, level)).Int()
+			if hour < nowHour {
+				oldLogKey := log.getCommonLogKey(name, level)
+				newLogKey := oldLogKey + ":last"
+				pipeline.Rename(context.Background(), oldLogKey, newLogKey)
+				oldStartKey := log.getCommonLogStartKey(name, level)
+				newStartKey := oldStartKey + ":plast"
+				pipeline.Rename(context.Background(), oldStartKey, newStartKey)
+				pipeline.Set(context.Background(), log.getCommonLogStartKey(name, level), nowHour, -1)
+			}
 		}
-		key := log.GetCommonLogKey(name, level, log.GetCommonLogOffset())
-		pipeline.ZIncrBy(context.Background(), key, 1, message)
+		pipeline.ZIncrBy(context.Background(), log.getCommonLogKey(name, level), 1, message)
 		_, err := pipeline.Exec(context.Background())
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	for i := 0; i < RETRIES; i++ {
-		err := log.Client.Watch(ctx, txf, log.GetCommonLogOffsetKey())
+		err := log.Client.Watch(ctx, txf, log.getCommonLogStartKey(name, level))
 		if err == redis.TxFailedErr {
+			fmt.Println("val:", err)
 			continue
 		}
 		return err
