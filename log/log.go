@@ -83,7 +83,6 @@ func (log *Log) CommonLog(name, message string, level string) error {
 	for i := 0; i < RETRIES; i++ {
 		err := log.Client.Watch(ctx, txf, log.getCommonLogStartKey(name, level))
 		if err == redis.TxFailedErr {
-			fmt.Println("val:", err)
 			continue
 		}
 		return err
