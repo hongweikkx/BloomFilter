@@ -9,4 +9,5 @@ learn redis
 + [x] log
 + [x] counter
 + [x] auto complete
++ [x] lock
 
