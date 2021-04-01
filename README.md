@@ -10,4 +10,5 @@ learn redis
 + [x] counter
 + [x] auto complete
 + [x] lock
++ [x] semaphore
 
