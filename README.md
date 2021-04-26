@@ -1,6 +1,6 @@
 # learn redis
-learn redis
-
+learn redis :blush:
+## list
 + [x] BloomFilter 
 + [x] Blog (article's post&vote&rank)
 + [x] base
@@ -10,5 +10,8 @@ learn redis
 + [x] counter
 + [x] auto complete
 + [x] lock
-+ [x] semaphore
++ [ ] semaphore
++ [ ] social
 
+## issue
++ [ ] 没有有效利用context

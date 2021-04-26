@@ -30,18 +30,19 @@ func GetLockKey(key string) string {
 	return "lock:" + key
 }
 
-func (locker *Locker) AcquireLock(key string, timeout time.Duration) (string, bool) {
+func (locker *Locker) AcquireLock(key string, lockTimeout, timeout time.Duration) (string, bool) {
 	endTime := time.Now().Add(timeout)
 	id := uuid.NewString()
 	for time.Now().Before(endTime) {
-		cmd := locker.Client.SetNX(context.Background(), GetLockKey(key), id, -1)
+		ctx := context.Background()
+		cmd := locker.Client.SetNX(ctx, GetLockKey(key), id, -1)
 		if cmd.Err() != nil || cmd.Val() == false {
-			cmdT := locker.Client.TTL(context.Background(), GetLockKey(key))
+			cmdT := locker.Client.TTL(ctx, GetLockKey(key))
 			if cmdT.Val() == -1 {
-				locker.Client.Expire(context.Background(), GetLockKey(key), 10*time.Second)
+				locker.Client.Expire(ctx, GetLockKey(key), lockTimeout)
 			}
 		} else {
-			locker.Client.Expire(context.Background(), GetLockKey(key), 10*time.Second)
+			locker.Client.Expire(ctx, GetLockKey(key), lockTimeout)
 			return id, true
 		}
 		time.Sleep(time.Millisecond * 10)

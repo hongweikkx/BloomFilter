@@ -59,7 +59,7 @@ func (sema *Semaphore) ReleaseUnfairCounterSemaphore(key string, identifire stri
 
 func (sema *Semaphore) AcquireCounterSemaphoreWithLock(key string, limit int64) (string, bool) {
 	locker := lock.NewLocker()
-	idLock, b := locker.AcquireLock(key, 5*time.Second)
+	idLock, b := locker.AcquireLock(key, 10*time.Second, 5*time.Second)
 	if !b {
 		return "", b
 	}
@@ -73,7 +73,7 @@ func (sema *Semaphore) AcquireCounterSemaphoreWithLock(key string, limit int64) 
 
 func (sema *Semaphore) ReleaseCounterSemaphoreWithLock(key string, identifire string) bool {
 	locker := lock.NewLocker()
-	idLock, b := locker.AcquireLock(key, 5*time.Second)
+	idLock, b := locker.AcquireLock(key, 10*time.Second, 5*time.Second)
 	if !b {
 		return false
 	}
