@@ -11,7 +11,7 @@ learn redis :blush:
 + [x] auto complete
 + [x] lock
 + [ ] semaphore
-+ [ ] social
++ [x] social
 
 ## issue
 + [ ] 没有有效利用context

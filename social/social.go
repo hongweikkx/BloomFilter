@@ -67,10 +67,6 @@ following:$uid  ----- zset
 
 home:$uid  ------ zset
 	$statusId   $posted
-
-
-朋友圈的timeline
-
 */
 func NewSocial() *Social {
 	return &Social{Client: initRedisClient()}
@@ -276,6 +272,10 @@ func (social *Social) FollowUser(fromId, toId string) error {
 	pipeline.HIncrBy(ctx, "user:"+fromId, "followings", followingCount)
 	pipeline.HIncrBy(ctx, "user:"+toId, "followers", followerCount)
 	pipeline.ZAdd(ctx, "home:"+fromId, ntimelineTo...)
+	// zrange index
+	//-10 -9 -8 -7 -6 -5 -4 -3 -2 -1
+	//  0  1  2  3  4  5  6  7  8  9
+	// 左闭and右闭. 所以zremrangebyrank rem 0,-4  表示删除最小的n个元素，剩下4个元素
 	pipeline.ZRemRangeByRank(ctx, "home:"+fromId, 0, -HOME_TIME_LINE_LIMIT)
 	_, err = pipeline.Exec(ctx)
 	return err
